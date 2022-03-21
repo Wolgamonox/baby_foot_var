@@ -1,3 +1,4 @@
+from fileinput import filename
 import os
 import shutil
 from datetime import datetime
@@ -20,9 +21,9 @@ CAM_RESOLUTION_BIG = (640, 480)
 CAM_RESOLUTION_SMALL = (480, 360)
 
 # Replay settings
-REPLAY_DELAY = 2        # s
-SLOWING_FACTOR = 2      # s
-REPLAY_DURATION = 5     # s
+REPLAY_DELAY = 0        # s
+SLOWING_FACTOR = 1      # s
+REPLAY_DURATION = 7     # s
 
 # Serial port settings
 COM_PORT = 'COM7'
@@ -30,6 +31,10 @@ BAUDRATE = 9600
 
 # Detector settings
 SAMPLE_RATE = 100       # Hz
+
+# Icons paths
+GREEN_LIGHT_ICON = 'core/icons/Green_Light_Icon.png'
+RED_LIGHT_ICON = 'core/icons/Red_Light_Icon.png'
 
 
 class Gui:
@@ -66,6 +71,9 @@ class Gui:
                                 return_keyboard_events=True,
                                 finalize=True,
                                 use_default_focus=False)
+
+        # define callback to be called when a goal is detected
+        self.goal_callback = self.window.write_event_value
 
         self.setup_replay_folders()
 
@@ -113,14 +121,18 @@ class Gui:
         # Controls
         controls_row = [
             sg.Frame("Controls", [[
-                sg.Image(filename='core/icons/Green_Light_Icon.png'),
+                sg.Image(filename=RED_LIGHT_ICON,
+                         key="k_serial_port_status"),
+                sg.Text("Detector connection status",
+                          tooltip="Click to refresh",
+                          enable_events=True),
                 sg.Push(),
                 sg.Checkbox("Delete replays",
-                            default=False,
+                            default=True,
                             key='k_delete_replays'),
                 sg.Button("New Game"),
                 sg.Button("Connect camera(s)"),
-            ]], expand_x=True, element_justification='right')
+            ]], expand_x=True)
         ]
 
         # Main layout
@@ -160,7 +172,12 @@ class Gui:
             self.webcams[-1].connect()
 
         # start listening for goals
-        self.detector.start(self.window.write_event_value)
+        self.detector.start(self.goal_callback)
+        if self.detector.connected:
+            self.window['k_serial_port_status'].update(filename=GREEN_LIGHT_ICON)
+        else:
+            self.window['k_serial_port_status'].update(filename=RED_LIGHT_ICON)
+            print("Could not connect to the serial port. Please check the wiring or the settings")
 
     def disconnect_webcams(self):
         """
@@ -252,7 +269,7 @@ class Gui:
                     self.play_goal_replay()
 
                     # restart the listening after the replay
-                    self.detector.start(self.window.write_event_value)
+                    self.detector.start(self.goal_callback)
 
                 # Red goal
                 elif event == 'r':
@@ -264,7 +281,7 @@ class Gui:
                     self.play_goal_replay()
 
                     # restart the listening after the replay
-                    self.detector.start(self.window.write_event_value)
+                    self.detector.start(self.goal_callback)
 
             # Update score when the spinner is changed
             if event == 'k_blue_score':
@@ -288,6 +305,15 @@ class Gui:
                     self.connect_webcams(parse_IPs(ips_raw))
                     self.streaming = True
 
+            # Check if Serial port status
+            if event == "Detector connection status":
+                self.detector.start(self.goal_callback)
+                if self.detector.connected:
+                    self.window['k_serial_port_status'].update(filename=GREEN_LIGHT_ICON)
+                else:
+                    self.window['k_serial_port_status'].update(filename=RED_LIGHT_ICON)
+                    print("Could not connect to the serial port. Please check the wiring or the settings")
+
             # Resets the score for a new game
             if event == "New Game":
                 self.game.reset()
@@ -296,8 +322,11 @@ class Gui:
 
                 # if checked, delete goal replays
                 if self.window['k_delete_replays'].get():
-                    shutil.rmtree(self.game_videos_path)
-                    print("Replays deleted.")
+                    try:
+                        shutil.rmtree(self.game_videos_path)
+                        print("Replays deleted.")
+                    except PermissionError:
+                        print("Could not delete the files, another process was using them. Try closing the replay window.")
 
                 self.setup_replay_folders()
 

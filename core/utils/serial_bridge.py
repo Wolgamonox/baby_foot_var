@@ -1,7 +1,7 @@
 from threading import Thread
 from time import sleep
 
-from serial import Serial
+import serial
 
 
 class IR_Goal_Detector:
@@ -12,12 +12,14 @@ class IR_Goal_Detector:
     def __init__(self, port, baudrate, sample_rate):
         self.sample_rate = sample_rate
 
-        self.ser = Serial()
+        self.ser = serial.Serial()
         self.ser.port = port
         self.ser.baudrate = baudrate
 
         self.listening_thread = None
         self.listening = False
+
+        self.connected = False
 
     def start(self, callback):
         """
@@ -25,6 +27,16 @@ class IR_Goal_Detector:
         in the call back. The values given by detection are 'r'
         for red goal and 'b for blue goal.
         """
+        if self.ser.is_open:
+            self.connected = True
+        else:
+            try:
+                self.ser.open()
+            except serial.serialutil.SerialException:
+                self.connected =  False
+
+            self.connected = True
+
         self.listening_thread = Thread(target=self.thread, args=[callback])
         self.listening_thread.start()
 
@@ -34,11 +46,15 @@ class IR_Goal_Detector:
         """
         if not self.listening:
             self.listening = True
-            if not self.ser.is_open:
-                self.ser.open()
 
-            while self.ser.is_open and self.listening:
-                val = self.ser.readline(1).decode()
+            while self.listening:
+                try:
+                    val = self.ser.readline(1).decode()
+                except serial.serialutil.SerialException:
+                    self.connected = False
+                    self.listening = False
+                    break
+                
                 if val in ('b', 'r'):
                     callback(val, '')
                     self.listening = False

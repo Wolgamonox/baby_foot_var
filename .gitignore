@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# goal videos
+goal_videos/
+
 # Distribution / packaging
 .Python
 build/

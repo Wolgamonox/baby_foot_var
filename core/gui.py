@@ -1,14 +1,10 @@
-from fileinput import filename
 import os
 import shutil
 from datetime import datetime
-from threading import Thread
 from time import sleep
 
 import PySimpleGUI as sg
-from numpy import size
 import vlc
-from serial import Serial
 
 from core.utils.serial_bridge import IR_Goal_Detector
 from core.utils.utils import parse_IPs

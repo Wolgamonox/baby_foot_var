@@ -223,8 +223,11 @@ class Gui:
             event, values = replay_window.read(timeout=500)
 
             if not media_players[-1].is_playing():
-                replay_window.close()
                 break
+            if event == "Exit" or event == sg.WIN_CLOSED:
+                break
+
+        replay_window.close()
 
     def save_goal_replay(self):
         """

@@ -7,6 +7,8 @@ import numpy as np
 
 from core.utils.utils import Queue
 
+SLOWING_FACTOR = 2    
+
 
 class Webcam:
     """
@@ -17,6 +19,7 @@ class Webcam:
         self.ip = ip
         self.stream_url = 'http://' + self.ip + ':4747/video'
         self.fps = None
+
 
         self.is_buffering = False
         self.buffer = Queue()
@@ -80,7 +83,7 @@ class Webcam:
             self.is_buffering = False
             self.cam_thread.join()
 
-    def save_buffer(self, filename, slowing_factor=1, codec='MJPG'):
+    def save_buffer(self, filename, slowing_factor=SLOWING_FACTOR, codec='MJPG'):
         """
         Saves the buffer to the filename provided (only tested for .avi files)
         Increase the slowing_factor to have a slow motion effect.

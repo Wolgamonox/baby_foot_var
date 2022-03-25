@@ -1,6 +1,7 @@
 import os
 import shutil
 from datetime import datetime
+from socket import timeout
 from time import sleep
 
 import PySimpleGUI as sg
@@ -17,12 +18,12 @@ CAM_RESOLUTION_BIG = (640, 480)
 CAM_RESOLUTION_SMALL = (480, 360)
 
 # Replay settings
-REPLAY_DELAY = 0        # s
-SLOWING_FACTOR = 1      # s
-REPLAY_DURATION = 7     # s
+REPLAY_DELAY = 1        # s
+SLOWING_FACTOR = 10      # s
+REPLAY_DURATION = 5     # s
 
 # Serial port settings
-COM_PORT = 'COM7'
+COM_PORT = 'COM8'
 BAUDRATE = 9600
 
 # Detector settings
@@ -218,8 +219,12 @@ class Gui:
             media_player.set_media(media)
             media_player.play()
 
-        event, values = replay_window.read()
-        replay_window.close()
+        while True:
+            event, values = replay_window.read(timeout=500)
+
+            if not media_players[-1].is_playing():
+                replay_window.close()
+                break
 
     def save_goal_replay(self):
         """
@@ -333,7 +338,6 @@ class Gui:
 
             # Closing the window
             if event == "Exit" or event == sg.WIN_CLOSED:
-                self.detector.stop()
                 # if checked, delete goal replays
                 if self.window['k_delete_replays'].get():
                     shutil.rmtree(self.game_videos_path)
@@ -341,5 +345,6 @@ class Gui:
                 break
 
         # cleaning up
+        self.detector.stop()
         self.disconnect_webcams()
         self.window.close()

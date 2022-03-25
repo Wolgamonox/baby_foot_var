@@ -47,4 +47,4 @@ To connect more than one camera you'll need to call the program with the desired
 Install droidcam app on your smartphone (available for Android and iOS). It's free.
 
 ### 3) Usage
-In order to connect the smartphone(s), they'll have to be connected to the same wifi network as the computer. Open the droidcam app on the smartphone(s) and add the IP address shown on the phone using the "Connect Webcam(s)" button in the program.
+In order to connect the smartphone(s), they'll have to be on the same wifi network as the computer. Open the droidcam app on the smartphone(s) and add the IP address shown on the phone using the "Connect Webcam(s)" button in the program.

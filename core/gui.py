@@ -23,11 +23,10 @@ SLOWING_FACTOR = 10      # s
 REPLAY_DURATION = 5     # s
 
 # Serial port settings
-COM_PORT = 'COM8'
 BAUDRATE = 9600
 
 # Detector settings
-SAMPLE_RATE = 100       # Hz
+SAMPLE_RATE = 10       # Hz
 
 # Icons paths
 GREEN_LIGHT_ICON = 'core/icons/Green_Light_Icon.png'
@@ -56,8 +55,7 @@ class Gui:
         self.streaming = False
 
         # creating IR detector
-        self.detector = IR_Goal_Detector(COM_PORT,
-                                         BAUDRATE,
+        self.detector = IR_Goal_Detector(BAUDRATE,
                                          SAMPLE_RATE)
 
         # creating main window
@@ -147,12 +145,14 @@ class Gui:
         time_str = now.strftime("%d.%m.%Y_%Hh%Mm%S")
 
         dir_path = os.path.join(os.getcwd(), 'goal_videos')
-        self.game_videos_path = os.path.join(dir_path, time_str)
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
 
+        self.game_videos_path = os.path.join(dir_path, time_str)
         try:
             os.mkdir(self.game_videos_path)
         except FileExistsError:
-            pass
+            pass # just override old file
 
     def connect_webcams(self, ips):
         """

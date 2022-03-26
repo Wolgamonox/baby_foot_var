@@ -2,6 +2,7 @@ from threading import Thread
 from time import sleep
 
 import serial
+from serial.tools import list_ports
 
 
 class IR_Goal_Detector:
@@ -9,17 +10,27 @@ class IR_Goal_Detector:
     A communication bridge between the arduino IR detection system
     and the replay GUI.
     """
-    def __init__(self, port, baudrate, sample_rate):
+    def __init__(self, baudrate, sample_rate, port=None):
         self.sample_rate = sample_rate
 
         self.ser = serial.Serial()
-        self.ser.port = port
         self.ser.baudrate = baudrate
+        if port is None:
+            self.ser.port = self.find_available_port()
+        else:
+            self.ser.port = port
 
         self.listening_thread = None
         self.listening = False
 
         self.connected = False
+
+    def find_available_port(self):
+        """
+        Finds the first available COM port
+        """
+        ports = list(list_ports.comports())
+        return ports[0].name
 
     def start(self, callback):
         """
@@ -36,6 +47,9 @@ class IR_Goal_Detector:
                 self.connected =  False
 
             self.connected = True
+
+        # clean serial before starting to read
+        self.ser.flushInput()
 
         self.listening_thread = Thread(target=self.thread, args=[callback])
         self.listening_thread.start()

@@ -45,6 +45,7 @@ class Gui:
         self.slowing_factor = SLOWING_FACTOR
         self.replay_duration = REPLAY_DURATION
         self.nb_camera = nb_camera
+        self.webcams = []
 
         # creating game
         self.game = Game()
@@ -55,8 +56,7 @@ class Gui:
         self.streaming = False
 
         # creating IR detector
-        self.detector = IR_Goal_Detector(BAUDRATE,
-                                         SAMPLE_RATE)
+        self.detector = IR_Goal_Detector(BAUDRATE, SAMPLE_RATE)
 
         # creating main window
         self.camera_keys = ['k_cam_%d' % i for i in range(nb_camera)]
@@ -165,8 +165,14 @@ class Gui:
         # creating webcams
         self.webcams = []
         for ip in ips:
-            self.webcams.append(Webcam(ip, self.replay_duration))
-            self.webcams[-1].connect()
+            try:
+                webcam = Webcam(ip, self.replay_duration)
+                webcam.connect()
+            except Exception as e:
+                print("Error : %s" % e)
+                return
+            
+            self.webcams.append(webcam)
 
         # start listening for goals
         self.detector.start(self.goal_callback)
@@ -218,6 +224,7 @@ class Gui:
             media = self.vlc_instance.media_new(source)
             media_player.set_media(media)
             media_player.play()
+        
 
         while True:
             event, values = replay_window.read(timeout=500)
@@ -227,6 +234,9 @@ class Gui:
             if event == "Exit" or event == sg.WIN_CLOSED:
                 break
 
+        # cleanup after replay
+        for media_player in media_players:
+            media_player.release()
         replay_window.close()
 
     def save_goal_replay(self):
@@ -261,29 +271,22 @@ class Gui:
             if event is None:
                 break
 
-            if len(event) == 1:
-                # Blue goal
+            # Goal detected
+            if event in ('r', 'b'):
                 if event == 'b':
                     # update score
                     self.game.goal(self.game.player_blue)
                     self.window["k_blue_score"].update(value=self.game.player_blue.score)
 
-                    self.save_goal_replay()
-                    sleep(REPLAY_DELAY)
-                    self.play_goal_replay()
 
-                    # restart the listening after the replay
-                    self.detector.start(self.goal_callback)
-
-                # Red goal
                 elif event == 'r':
                     self.game.goal(self.game.player_red)
                     self.window["k_red_score"].update(value=self.game.player_red.score)
 
+                if len(self.webcams) > 0:
                     self.save_goal_replay()
                     sleep(REPLAY_DELAY)
                     self.play_goal_replay()
-
                     # restart the listening after the replay
                     self.detector.start(self.goal_callback)
 
@@ -307,7 +310,8 @@ class Gui:
                 # check if input is not empty
                 if ips_raw:
                     self.connect_webcams(parse_IPs(ips_raw))
-                    self.streaming = True
+                    if len(self.webcams) > 0:
+                        self.streaming = True
 
             # Check if Serial port status
             if event == "Detector connection status":

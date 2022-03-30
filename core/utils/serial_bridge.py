@@ -15,10 +15,7 @@ class IR_Goal_Detector:
 
         self.ser = serial.Serial()
         self.ser.baudrate = baudrate
-        if port is None:
-            self.ser.port = self.find_available_port()
-        else:
-            self.ser.port = port
+        self.ser.port = port
 
         self.listening_thread = None
         self.listening = False
@@ -30,7 +27,8 @@ class IR_Goal_Detector:
         Finds the first available COM port
         """
         ports = list(list_ports.comports())
-        return ports[0].name
+        if len(ports) > 0:
+            return ports[0].name
 
     def start(self, callback):
         """
@@ -38,15 +36,17 @@ class IR_Goal_Detector:
         in the call back. The values given by detection are 'r'
         for red goal and 'b for blue goal.
         """
-        if self.ser.is_open:
-            self.connected = True
-        else:
+        if self.ser.port is None:
+            self.ser.port = self.find_available_port()
+
+        if not self.ser.is_open:
             try:
                 self.ser.open()
             except serial.serialutil.SerialException:
                 self.connected =  False
-
-            self.connected = True
+                return
+        
+        self.connected = True
 
         # clean serial before starting to read
         self.ser.flushInput()
@@ -80,6 +80,7 @@ class IR_Goal_Detector:
         """
         Stops the goal detection system.
         """
-        self.listening = False
-        self.listening_thread.join()
-        self.ser.close()
+        if self.listening:
+            self.listening_thread.join()
+            self.listening = False
+            self.ser.close()

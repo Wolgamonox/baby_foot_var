@@ -45,7 +45,7 @@ class Webcam:
             self.cam_thread.start()
 
         else:
-            print('Error: Could not connect %s.' % self.ip)
+            raise Exception('Could not connect %s' % self.ip)
 
     def disconnect(self):
         """

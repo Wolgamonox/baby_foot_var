@@ -1,2 +1,0 @@
-- Integrate settings in the GUI
-- bigger or resizable window

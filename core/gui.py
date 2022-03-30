@@ -1,7 +1,6 @@
 import os
 import shutil
 from datetime import datetime
-from socket import timeout
 from time import sleep
 
 import PySimpleGUI as sg
@@ -11,22 +10,13 @@ from core.utils.serial_bridge import IR_Goal_Detector
 from core.utils.utils import parse_IPs
 from core.utils.webcam import Webcam
 
-from .game_logic.game import Game
+from core.game_logic.game import Game
+
+from core.dialogs.settings_dialog import Settings_dialog
 
 # Resolution settings
 CAM_RESOLUTION_BIG = (640, 480)
 CAM_RESOLUTION_SMALL = (480, 360)
-
-# Replay settings
-REPLAY_DELAY = 1        # s
-SLOWING_FACTOR = 10      # s
-REPLAY_DURATION = 5     # s
-
-# Serial port settings
-BAUDRATE = 9600
-
-# Detector settings
-SAMPLE_RATE = 10       # Hz
 
 # Icons paths
 GREEN_LIGHT_ICON = 'core/icons/Green_Light_Icon.png'
@@ -41,9 +31,9 @@ class Gui:
     def __init__(self, nb_camera):
         sg.theme('DarkAmber')
 
-        # Change video preferences :
-        self.slowing_factor = SLOWING_FACTOR
-        self.replay_duration = REPLAY_DURATION
+        # Load settinsg
+        sg.user_settings_filename(filename='settings.json', path='core')
+
         self.nb_camera = nb_camera
         self.webcams = []
 
@@ -56,7 +46,9 @@ class Gui:
         self.streaming = False
 
         # creating IR detector
-        self.detector = IR_Goal_Detector(BAUDRATE, SAMPLE_RATE)
+        baudrate = int(sg.user_settings_get_entry('baudrate'))
+        detector_sample_rate = int(sg.user_settings_get_entry('detector_sample_rate'))
+        self.detector = IR_Goal_Detector(baudrate, detector_sample_rate)
 
         # creating main window
         self.camera_keys = ['k_cam_%d' % i for i in range(nb_camera)]
@@ -76,6 +68,14 @@ class Gui:
         """
         Setup the layout for the main window.
         """
+
+        # Menu bar
+        menu_row = [sg.Menu([
+            ["Settings", [
+                "Edit settings",
+                "&About"
+            ]],
+        ])]
 
         # Scores
         scores_row = [
@@ -132,6 +132,7 @@ class Gui:
 
         # Main layout
         layout = [
+            menu_row,
             scores_row,
             cameras_row,
             controls_row,
@@ -162,11 +163,17 @@ class Gui:
         # disconnect potential existing webcams
         self.disconnect_webcams()
 
+        # Load variables from settings
+        slowing_factor = int(sg.user_settings_get_entry('slowing_factor'))
+        replay_duration = int(sg.user_settings_get_entry('replay_duration'))
+
         # creating webcams
         self.webcams = []
         for ip in ips:
             try:
-                webcam = Webcam(ip, self.replay_duration)
+                webcam = Webcam(ip,
+                                slowing_factor,
+                                replay_duration)
                 webcam.connect()
             except Exception as e:
                 print("Error : %s" % e)
@@ -271,8 +278,16 @@ class Gui:
             if event is None:
                 break
 
+            # Closing the window
+            if event in ("Exit", sg.WIN_CLOSED):
+                # if checked, delete goal replays
+                if self.window['k_delete_replays'].get():
+                    shutil.rmtree(self.game_videos_path)
+                    print("Replays deleted.")
+                break
+
             # Goal detected
-            if event in ('r', 'b'):
+            elif event in ('r', 'b'):
                 if event == 'b':
                     # update score
                     self.game.goal(self.game.player_blue)
@@ -285,13 +300,13 @@ class Gui:
 
                 if len(self.webcams) > 0:
                     self.save_goal_replay()
-                    sleep(REPLAY_DELAY)
+                    sleep(int(sg.user_settings_get_entry('replay_delay')))
                     self.play_goal_replay()
                     # restart the listening after the replay
                     self.detector.start(self.goal_callback)
 
             # Update score when the spinner is changed
-            if event == 'k_blue_score':
+            elif event == 'k_blue_score':
                 if self.window['k_blue_score'].get() > self.game.player_blue.score:
                     self.game.goal(self.game.player_blue)
                 elif self.game.player_blue.score > 0:
@@ -304,7 +319,7 @@ class Gui:
                     self.game.player_red.score -= 1
 
             # Connect to the webcam
-            if event == "Connect camera(s)":
+            elif event == "Connect camera(s)":
                 ips_raw = sg.popup_get_text("Please enter the IPs (max 3) separated by a ','")
 
                 # check if input is not empty
@@ -314,7 +329,7 @@ class Gui:
                         self.streaming = True
 
             # Check if Serial port status
-            if event == "Detector connection status":
+            elif event == "Detector connection status":
                 self.detector.start(self.goal_callback)
                 if self.detector.connected:
                     self.window['k_serial_port_status'].update(filename=GREEN_LIGHT_ICON)
@@ -323,7 +338,7 @@ class Gui:
                     print("Could not connect to the serial port. Please check the wiring or the settings")
 
             # Resets the score for a new game
-            if event == "New Game":
+            elif event == "New Game":
                 self.game.reset()
                 self.window['k_blue_score'].update(self.game.player_blue.score)
                 self.window['k_red_score'].update(self.game.player_red.score)
@@ -338,18 +353,16 @@ class Gui:
 
                 self.setup_replay_folders()
 
+            # Open Settings dialog
+            elif event == "Edit settings":
+                settings_dialog = Settings_dialog()
+                settings_dialog.run()
+                sg.user_settings_load(filename='settings.json', path='core')
+
             # Stream the webcam output to the main window screen
             if self.streaming:
                 for key, webcam in zip(self.camera_keys, self.webcams):
                     self.window[key].update(data=webcam.current_frame())
-
-            # Closing the window
-            if event == "Exit" or event == sg.WIN_CLOSED:
-                # if checked, delete goal replays
-                if self.window['k_delete_replays'].get():
-                    shutil.rmtree(self.game_videos_path)
-                    print("Replays deleted.")
-                break
 
         # cleaning up
         self.detector.stop()

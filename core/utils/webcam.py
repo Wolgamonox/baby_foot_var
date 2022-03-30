@@ -15,11 +15,12 @@ class Webcam:
     Webcam class for a droidcam using opencv
     """
 
-    def __init__(self, ip, buffer_duration=5):
+    def __init__(self, ip, buffer_duration, slowing_factor):
         self.ip = ip
         self.stream_url = 'http://' + self.ip + ':4747/video'
-        self.fps = None
 
+        self.fps = None
+        self.slowing_factor = slowing_factor
 
         self.is_buffering = False
         self.buffer = Queue()
@@ -83,7 +84,7 @@ class Webcam:
             self.is_buffering = False
             self.cam_thread.join()
 
-    def save_buffer(self, filename, slowing_factor=SLOWING_FACTOR, codec='MJPG'):
+    def save_buffer(self, filename, codec='MJPG'):
         """
         Saves the buffer to the filename provided (only tested for .avi files)
         Increase the slowing_factor to have a slow motion effect.
@@ -94,7 +95,7 @@ class Webcam:
         (w, h) = (len(frames[0][0]), len(frames[0]))
         writer = cv2.VideoWriter(filename,
                                  fourcc,
-                                 self.fps/float(slowing_factor),
+                                 self.fps/float(self.slowing_factor),
                                  (w, h),
                                  True)
 

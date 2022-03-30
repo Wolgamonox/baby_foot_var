@@ -1,27 +1,28 @@
 import json
-import os
 
 import PySimpleGUI as sg
 
-DEFAULT_SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'default_settings.json')
-SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'settings.json')
 
 class Settings_dialog:
     """
     Simple dialog to change settings
     """
 
-    def __init__(self):
-        # Load current settings
-        with open(SETTINGS_PATH, "r") as content:
-            self.settings = json.load(content)
+    def __init__(self, settings_path, default_settings_path):
+        # For use in save()
+        self.settings_path = settings_path
 
         # Load default settings
-        with open(DEFAULT_SETTINGS_PATH, "r") as content:
+        with open(default_settings_path, "r") as content:
             self.default_settings = json.load(content)
 
-        if len(self.settings) != len(self.default_settings):
+        # Load current settings
+        try:
+            with open(settings_path, "r") as content:
+                self.settings = json.load(content)
+        except FileNotFoundError:
             self.settings = self.default_settings
+            self.save()
 
         self.window = sg.Window("Settings",
                                 self.setup_layout(),
@@ -59,7 +60,7 @@ class Settings_dialog:
         """
         Saves the current settings in the settings file
         """
-        with open(SETTINGS_PATH, "w") as out_file:
+        with open(self.settings_path, "w") as out_file:
             json.dump(self.settings, out_file, indent=4)
 
     def run(self):

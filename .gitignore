@@ -6,8 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
-# goal videos
+# Custom
 goal_videos/
+core/settings.json
 
 # Distribution / packaging
 .Python

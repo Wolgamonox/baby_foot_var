@@ -23,8 +23,8 @@ GREEN_LIGHT_ICON = 'core/icons/Green_Light_Icon.png'
 RED_LIGHT_ICON = 'core/icons/Red_Light_Icon.png'
 
 # Settings paths
-DEFAULT_SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'default_settings.json')
-SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'settings.json')
+DEFAULT_SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'settings', 'default_settings.json')
+SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'settings', 'settings.json')
 
 
 class Gui:
@@ -40,7 +40,7 @@ class Gui:
             shutil.copyfile(DEFAULT_SETTINGS_PATH, SETTINGS_PATH)
 
         # Load settings
-        sg.user_settings_filename(filename='settings.json', path='core')
+        sg.user_settings_filename(filename='settings.json', path='core/settings')
 
         self.nb_camera = nb_camera
         self.webcams = []

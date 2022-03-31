@@ -1,11 +1,13 @@
 # TODO list
 
-- [X] implement auto closing replay window
-- [X] correct multiple goal detection bug
-- [X] correct various bugs
+- [x] implement auto closing replay window
+- [x] correct multiple goal detection bug
+- [x] correct various bugs
   - [ ] detecting with only serial not cam
-  - [X] only cam no serial
-- [X] integrate settings option in GUI
-- [ ] bigger or resizable window
+  - [x] only cam no serial
+- [x] integrate settings option in GUI
+- [ ] bigger or resizable window (might not be needed)
 - [ ] correct vlc error at beginning
+- [ ] move replay dialog in the replay_dialog.py module
+- [ ] Implement About button
 

@@ -2,23 +2,22 @@ import json
 
 import PySimpleGUI as sg
 
+from core.utils import constants
+
 
 class Settings_dialog:
     """
     Simple dialog to change settings
     """
 
-    def __init__(self, settings_path, default_settings_path):
-        # For use in save()
-        self.settings_path = settings_path
-
+    def __init__(self):
         # Load default settings
-        with open(default_settings_path, "r") as content:
+        with open(constants.DEFAULT_SETTINGS_PATH, "r") as content:
             self.default_settings = json.load(content)
 
         # Load current settings
         try:
-            with open(settings_path, "r") as content:
+            with open(constants.SETTINGS_PATH, "r") as content:
                 self.settings = json.load(content)
         except FileNotFoundError:
             self.settings = self.default_settings
@@ -34,9 +33,9 @@ class Settings_dialog:
         """
         Setup layout for settings dialog
         """
-        video_settings = [sg.Frame("Video", [
-            [sg.Text('Slowing factor', size=(15, 1), tooltip='How much the video is slowed'),
-             sg.Input(self.settings['slowing_factor'], key='slowing_factor')],
+        replay_settings = [sg.Frame("Replay", [
+            [sg.Text('Speed factor', size=(15, 1), tooltip='How much the video is slowed'),
+             sg.Input(self.settings['speed_factor'], key='speed_factor')],
             [sg.Text('Replay duration', size=(15, 1), tooltip='How long the replay will be'),
              sg.Input(self.settings['replay_duration'], key='replay_duration')],
             [sg.Text('Replay delay', size=(15, 1), tooltip='Time between the goal detection and the replay'),
@@ -54,13 +53,13 @@ class Settings_dialog:
 
         buttons = [sg.Button("Save", pad=(0, 2)), sg.Button("Reset to defaults")]
 
-        return [video_settings, serial_settings, buttons]
+        return [replay_settings, serial_settings, buttons]
 
     def save(self):
         """
         Saves the current settings in the settings file
         """
-        with open(self.settings_path, "w") as out_file:
+        with open(constants.SETTINGS_PATH, "w") as out_file:
             json.dump(self.settings, out_file, indent=4)
 
     def run(self):

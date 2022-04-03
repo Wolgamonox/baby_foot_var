@@ -4,27 +4,14 @@ from datetime import datetime
 from time import sleep
 
 import PySimpleGUI as sg
-import vlc
 
+from core.dialogs.replay_dialog import Replay_dialog
+from core.dialogs.settings_dialog import Settings_dialog
+from core.game_logic.game import Game
+from core.utils import constants
 from core.utils.serial_bridge import IR_Goal_Detector
 from core.utils.utils import parse_IPs
 from core.utils.webcam import Webcam
-
-from core.game_logic.game import Game
-
-from core.dialogs.settings_dialog import Settings_dialog
-
-# Resolution settings
-CAM_RESOLUTION_BIG = (640, 480)
-CAM_RESOLUTION_SMALL = (480, 360)
-
-# Icons paths
-GREEN_LIGHT_ICON = 'core/icons/Green_Light_Icon.png'
-RED_LIGHT_ICON = 'core/icons/Red_Light_Icon.png'
-
-# Settings paths
-DEFAULT_SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'settings', 'default_settings.json')
-SETTINGS_PATH = os.path.join(os.getcwd(), 'core', 'settings', 'settings.json')
 
 
 class Gui:
@@ -36,20 +23,17 @@ class Gui:
         sg.theme('DarkGrey12')
 
         # Create initial settings file with the default settings
-        if not os.path.exists(SETTINGS_PATH):
-            shutil.copyfile(DEFAULT_SETTINGS_PATH, SETTINGS_PATH)
+        if not os.path.exists(constants.SETTINGS_PATH):
+            shutil.copyfile(constants.DEFAULT_SETTINGS_PATH, constants.SETTINGS_PATH)
 
         # Load settings
-        sg.user_settings_filename(filename='settings.json', path='core/settings')
+        sg.user_settings_filename(filename='settings.json', path='core\settings')
 
         self.nb_camera = nb_camera
         self.webcams = []
 
         # creating game
         self.game = Game()
-
-        # init vlc player for replays
-        self.vlc_instance = vlc.Instance()
 
         self.streaming = False
 
@@ -110,11 +94,11 @@ class Gui:
         # Cameras [1-3]
         if self.nb_camera < 3:
             cameras_layout = [sg.Image('',
-                                       size=CAM_RESOLUTION_BIG,
+                                       size=constants.CAM_RESOLUTION_BIG,
                                        key=key) for key in self.camera_keys]
         else:
             cameras_layout = [sg.Image('',
-                                       size=CAM_RESOLUTION_SMALL,
+                                       size=constants.CAM_RESOLUTION_SMALL,
                                        key=key) for key in self.camera_keys]
 
         cameras_row = [
@@ -124,7 +108,7 @@ class Gui:
         # Controls
         controls_row = [
             sg.Frame("Controls", [[
-                sg.Image(filename=RED_LIGHT_ICON,
+                sg.Image(filename=constants.RED_LIGHT_ICON,
                          key="k_serial_port_status"),
                 sg.Text("Detector connection status",
                           tooltip="Click to refresh",
@@ -157,11 +141,14 @@ class Gui:
         if not os.path.exists(dir_path):
             os.mkdir(dir_path)
 
-        self.game_videos_path = os.path.join(dir_path, time_str)
+        goal_videos_path = os.path.join(dir_path, time_str)
         try:
-            os.mkdir(self.game_videos_path)
+            os.mkdir(goal_videos_path)
         except FileExistsError:
             pass # just override old file
+
+        # add path to the constants
+        constants.GOAL_VIDEOS_PATH = goal_videos_path
 
     def connect_webcams(self, ips):
         """
@@ -172,16 +159,13 @@ class Gui:
         self.disconnect_webcams()
 
         # Load variables from settings
-        slowing_factor = float(sg.user_settings_get_entry('slowing_factor'))
         replay_duration = int(sg.user_settings_get_entry('replay_duration'))
 
         # creating webcams
         self.webcams = []
         for ip in ips:
             try:
-                webcam = Webcam(ip,
-                                slowing_factor,
-                                replay_duration)
+                webcam = Webcam(ip, replay_duration)
                 webcam.connect()
             except Exception as e:
                 print("Error : %s" % e)
@@ -192,9 +176,9 @@ class Gui:
         # start listening for goals
         self.detector.start(self.goal_callback)
         if self.detector.connected:
-            self.window['k_serial_port_status'].update(filename=GREEN_LIGHT_ICON)
+            self.window['k_serial_port_status'].update(filename=constants.GREEN_LIGHT_ICON)
         else:
-            self.window['k_serial_port_status'].update(filename=RED_LIGHT_ICON)
+            self.window['k_serial_port_status'].update(filename=constants.RED_LIGHT_ICON)
             print("Could not connect to the serial port. Please check the wiring or the settings")
 
     def disconnect_webcams(self):
@@ -209,57 +193,18 @@ class Gui:
             pass
 
     def play_goal_replay(self):
-        if self.nb_camera < 3:
-            replay_row = [sg.Image('',
-                                   size=CAM_RESOLUTION_BIG,
-                                   key=key) for key in self.camera_keys]
-        else:
-            replay_row = [sg.Image('',
-                                   size=CAM_RESOLUTION_SMALL,
-                                   key=key) for key in self.camera_keys]
+        replay_dialog = Replay_dialog(self.camera_keys)
 
-        replay_window = sg.Window("Replay", [replay_row], finalize=True)
+        goal_number = self.game.player_blue.score + self.game.player_red.score
+        replay_dialog.play(goal_number)
 
-        # create media players
-        media_players = []
-        for key in self.camera_keys:
-            media_players.append(self.vlc_instance.media_player_new())
-            self.window[key].expand(True, True)
-            media_players[-1].set_hwnd(replay_window[key].Widget.winfo_id())
-
-        # play the last goal
-        i = 1
-        for media_player in media_players:
-            goal_number = self.game.player_blue.score + self.game.player_red.score
-            source = os.path.join(self.game_videos_path,
-                                  'goal_%d' % goal_number,
-                                  'cam%d.avi' % i)
-            i += 1
-
-            media = self.vlc_instance.media_new(source)
-            media_player.set_media(media)
-            media_player.play()
         
-
-        while True:
-            event, values = replay_window.read(timeout=500)
-
-            if not media_players[-1].is_playing():
-                break
-            if event == "Exit" or event == sg.WIN_CLOSED:
-                break
-
-        # cleanup after replay
-        for media_player in media_players:
-            media_player.release()
-        replay_window.close()
-
     def save_goal_replay(self):
         """
         Save goal replays in a folder named 'goal_<goal_number>'
         """
         goal_number = self.game.player_blue.score + self.game.player_red.score
-        folder_path = os.path.join(self.game_videos_path,
+        folder_path = os.path.join(constants.GOAL_VIDEOS_PATH,
                                    'goal_%d' % goal_number)
 
         # if the folder already exists, it means that a goal was false
@@ -290,7 +235,7 @@ class Gui:
             if event in ("Exit", sg.WIN_CLOSED):
                 # if checked, delete goal replays
                 if self.window['k_delete_replays'].get():
-                    shutil.rmtree(self.game_videos_path)
+                    shutil.rmtree(constants.GOAL_VIDEOS_PATH)
                     print("Replays deleted.")
                 break
 
@@ -340,9 +285,9 @@ class Gui:
             elif event == "Detector connection status":
                 self.detector.start(self.goal_callback)
                 if self.detector.connected:
-                    self.window['k_serial_port_status'].update(filename=GREEN_LIGHT_ICON)
+                    self.window['k_serial_port_status'].update(filename=constants.GREEN_LIGHT_ICON)
                 else:
-                    self.window['k_serial_port_status'].update(filename=RED_LIGHT_ICON)
+                    self.window['k_serial_port_status'].update(filename=constants.RED_LIGHT_ICON)
                     print("Could not connect to the serial port. Please check the wiring or the settings")
 
             # Resets the score for a new game
@@ -354,7 +299,7 @@ class Gui:
                 # if checked, delete goal replays
                 if self.window['k_delete_replays'].get():
                     try:
-                        shutil.rmtree(self.game_videos_path)
+                        shutil.rmtree(constants.GOAL_VIDEOS_PATH)
                         print("Replays deleted.")
                     except PermissionError:
                         print("Could not delete the files, another process was using them. Try closing the replay window.")
@@ -363,9 +308,10 @@ class Gui:
 
             # Open Settings dialog
             elif event == "Edit settings":
-                settings_dialog = Settings_dialog(SETTINGS_PATH, DEFAULT_SETTINGS_PATH)
+                settings_dialog = Settings_dialog()
                 settings_dialog.run()
-                sg.user_settings_load(filename='settings.json', path='core')
+                # maybe not useful ? need to test
+                sg.user_settings_load(filename='settings.json', path='core\settings')
 
             # Stream the webcam output to the main window screen
             if self.streaming:

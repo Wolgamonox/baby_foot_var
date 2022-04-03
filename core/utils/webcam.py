@@ -7,20 +7,17 @@ import numpy as np
 
 from core.utils.utils import Queue
 
-SLOWING_FACTOR = 2    
-
 
 class Webcam:
     """
     Webcam class for a droidcam using opencv
     """
 
-    def __init__(self, ip, buffer_duration, slowing_factor):
+    def __init__(self, ip, buffer_duration):
         self.ip = ip
         self.stream_url = 'http://' + self.ip + ':4747/video'
 
         self.fps = None
-        self.slowing_factor = slowing_factor
 
         self.is_buffering = False
         self.buffer = Queue()
@@ -87,7 +84,6 @@ class Webcam:
     def save_buffer(self, filename, codec='MJPG'):
         """
         Saves the buffer to the filename provided (only tested for .avi files)
-        Increase the slowing_factor to have a slow motion effect.
         """
         fourcc = cv2.VideoWriter_fourcc(*codec)
         frames = self.buffer.dump()
@@ -95,7 +91,7 @@ class Webcam:
         (w, h) = (len(frames[0][0]), len(frames[0]))
         writer = cv2.VideoWriter(filename,
                                  fourcc,
-                                 self.fps/float(self.slowing_factor),
+                                 self.fps,
                                  (w, h),
                                  True)
 
@@ -109,7 +105,8 @@ class Webcam:
         """
         frame = self.buffer.last()
         if type(frame) == NoneType:
-            frame = np.full((480, 640), 200)
+            # 200 is for gray
+            frame = np.full((480, 640), 200) 
 
         imgbytes = cv2.imencode('.png', frame)[1].tobytes()
         return imgbytes

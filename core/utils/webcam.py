@@ -106,7 +106,7 @@ class Webcam:
         frame = self.buffer.last()
         if type(frame) == NoneType:
             # 200 is for gray
-            frame = np.full((480, 640), 200) 
+            frame = np.full((480, 640), 200)
 
         imgbytes = cv2.imencode('.png', frame)[1].tobytes()
         return imgbytes

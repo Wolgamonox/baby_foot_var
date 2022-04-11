@@ -17,8 +17,8 @@ class Replay_dialog:
 
         # load settings
         with open(constants.SETTINGS_PATH, "r") as content:
-                self.settings = json.load(content)
-        
+            self.settings = json.load(content)
+
         # create the window
         if self.nb_camera < 3:
             replay_row = [sg.Image('',
@@ -51,7 +51,6 @@ class Replay_dialog:
             media_player.set_media(media)
             media_player.set_rate(float(self.settings['speed_factor']))
             media_player.play()
-        
 
         while True:
             event, values = self.replay_window.read(timeout=200)

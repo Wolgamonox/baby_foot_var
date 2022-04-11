@@ -27,7 +27,7 @@ class Gui:
             shutil.copyfile(constants.DEFAULT_SETTINGS_PATH, constants.SETTINGS_PATH)
 
         # Load settings
-        sg.user_settings_filename(filename='settings.json', path='core\settings')
+        sg.user_settings_filename(filename='settings.json', path='core/settings')
 
         self.nb_camera = nb_camera
         self.webcams = []
@@ -111,8 +111,8 @@ class Gui:
                 sg.Image(filename=constants.RED_LIGHT_ICON,
                          key="k_serial_port_status"),
                 sg.Text("Detector connection status",
-                          tooltip="Click to refresh",
-                          enable_events=True),
+                        tooltip="Click to refresh",
+                        enable_events=True),
                 sg.Push(),
                 sg.Checkbox("Delete replays",
                             default=True,
@@ -145,7 +145,7 @@ class Gui:
         try:
             os.mkdir(goal_videos_path)
         except FileExistsError:
-            pass # just override old file
+            pass    # just override old file
 
         # add path to the constants
         constants.GOAL_VIDEOS_PATH = goal_videos_path
@@ -170,7 +170,7 @@ class Gui:
             except Exception as e:
                 print("Error : %s" % e)
                 return
-            
+
             self.webcams.append(webcam)
 
         # start listening for goals
@@ -198,7 +198,6 @@ class Gui:
         goal_number = self.game.player_blue.score + self.game.player_red.score
         replay_dialog.play(goal_number)
 
-        
     def save_goal_replay(self):
         """
         Save goal replays in a folder named 'goal_<goal_number>'
@@ -245,7 +244,6 @@ class Gui:
                     # update score
                     self.game.goal(self.game.player_blue)
                     self.window["k_blue_score"].update(value=self.game.player_blue.score)
-
 
                 elif event == 'r':
                     self.game.goal(self.game.player_red)
@@ -311,7 +309,7 @@ class Gui:
                 settings_dialog = Settings_dialog()
                 settings_dialog.run()
                 # maybe not useful ? need to test
-                sg.user_settings_load(filename='settings.json', path='core\settings')
+                sg.user_settings_load(filename='settings.json', path='core/settings')
 
             # Stream the webcam output to the main window screen
             if self.streaming:

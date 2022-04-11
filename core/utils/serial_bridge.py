@@ -43,9 +43,9 @@ class IR_Goal_Detector:
             try:
                 self.ser.open()
             except serial.serialutil.SerialException:
-                self.connected =  False
+                self.connected = False
                 return
-        
+
         self.connected = True
 
         # clean serial before starting to read
@@ -68,7 +68,7 @@ class IR_Goal_Detector:
                     self.connected = False
                     self.listening = False
                     break
-                
+
                 if val in ('b', 'r'):
                     callback(val, '')
                     self.listening = False

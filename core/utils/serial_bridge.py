@@ -27,8 +27,10 @@ class IR_Goal_Detector:
         Finds the first available COM port
         """
         ports = list(list_ports.comports())
-        if len(ports) > 0:
-            return ports[0].name
+        for port in ports:
+            description = port.description.lower()
+            if 'serial' in description or 'bluetooth' not in description:
+                return port.name
 
     def start(self, callback):
         """
